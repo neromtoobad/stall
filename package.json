@@ -1,0 +1,32 @@
+{
+  "name": "stall",
+  "version": "1.0.0",
+  "description": "Sell digital files inside Nimiq Pay. Buyers pay in NIM or USDT, creators keep 100%.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:api": "node --watch server/index.js",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "NODE_ENV=production node server/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^2.1.6",
+    "@nimiq/mini-app-sdk": "^0.2.5",
+    "blakejs": "^1.2.1",
+    "hono": "^4.13.17",
+    "viem": "^2.57.16"
+  },
+  "devDependencies": {
+    "@nimiq/core": "^2.23.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
