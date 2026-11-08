@@ -52,5 +52,15 @@ export async function mountDevWallet(app) {
     const hash = await rpc('sendRawTransaction', [tx.toHex()])
     return c.json({ hash })
   })
+  app.post('/dev/stake', async (c) => {
+    const { delegation, value, kind } = await c.req.json()
+    const k = kp(who(c))
+    const height = await rpc('getBlockNumber', [])
+    const tx = kind === 'add'
+      ? TransactionBuilder.newAddStake(k.toAddress(), k.toAddress(), BigInt(value), 0n, height, 5)
+      : TransactionBuilder.newCreateStaker(k.toAddress(), Address.fromUserFriendlyAddress(delegation), BigInt(value), 0n, height, 5)
+    tx.sign(k)
+    return c.json({ hash: await rpc('sendRawTransaction', [tx.toHex()]) })
+  })
   console.log('dev wallet mounted at /dev/*')
 }

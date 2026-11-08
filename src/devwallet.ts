@@ -19,6 +19,8 @@ export function installDevWallet() {
     sendBasicTransactionWithData: async (a: any) => (await call('send', a)).hash,
     sendBasicTransaction: async (a: any) => (await call('send', a)).hash,
     getBalance: async () => (await call('wallet')).balance,
+    sendNewStakerTransaction: async (a: any) => (await call('stake', { ...a, kind: 'new' })).hash,
+    sendStakeTransaction: async (a: any) => (await call('stake', { ...a, kind: 'add' })).hash,
     isConsensusEstablished: async () => true,
     getBlockNumber: async () => 0,
     disconnect() {},

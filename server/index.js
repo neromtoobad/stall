@@ -8,7 +8,7 @@ import { Readable } from 'node:stream'
 import { db, one, all, run, FILES_DIR, COVERS_DIR } from './db.js'
 import {
   addressFromPublicKey, verifyNimiqSignature, checkNimPayment, checkUsdtPayment,
-  nimRates, prettyAddr, LUNA, USDT_POLYGON,
+  nimRates, prettyAddr, LUNA, USDT_POLYGON, NIM_RPC,
 } from './chain.js'
 
 const PORT = Number(process.env.PORT || 8787)
@@ -16,6 +16,7 @@ const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://stall.nerom.site').replac
 const DIST = path.resolve('dist')
 const MAX_FILE = 50 * 1024 * 1024
 const ORDER_TTL = 20 * 60_000
+const EXPLORE_NET = process.env.EXPLORE_NETWORK === 'testnet' ? 'testnet' : 'mainnet'
 
 const app = new Hono()
 const id = (n = 10) => crypto.randomBytes(16).toString('base64url').replace(/[-_]/g, '').slice(0, n)
@@ -44,13 +45,14 @@ function auth(c) {
   return creator ? { ...creator, session_network: s.network } : null
 }
 
-async function quote(product) {
+async function quote(product, tipUsd = 0) {
   const r = await nimRates()
   let usd
   if (product.price_currency === 'USD') usd = product.price_amount
   else if (product.price_currency === 'NGN') usd = product.price_amount * (r.usd / r.ngn)
   else usd = product.price_amount * r.usd
-  const nim = product.price_currency === 'NIM' ? product.price_amount : usd / r.usd
+  let nim = product.price_currency === 'NIM' ? product.price_amount : usd / r.usd
+  if (tipUsd > 0) { usd += tipUsd; nim += tipUsd / r.usd }
   return {
     usd: Math.round(usd * 100) / 100,
     ngn: Math.round(usd * (r.ngn / r.usd)),
@@ -70,7 +72,7 @@ function publicCreator(cr) {
 
 function publicProduct(p, extra = {}) {
   return {
-    id: p.id, title: p.title, description: p.description, kind: p.kind,
+    id: p.id, title: p.title, description: p.description, kind: p.kind, pwyw: !!p.pwyw,
     price: { amount: p.price_amount, currency: p.price_currency },
     acceptUsdt: !!p.accept_usdt, hue: p.hue, network: p.network, active: !!p.active,
     cover: p.cover_path ? `/api/cover/${p.id}` : null,
@@ -135,13 +137,23 @@ app.get('/api/me', async (c) => {
     WHERE o.creator_id = ? AND o.status = 'paid' ORDER BY o.paid_at DESC LIMIT 50`, me.id)
   const tot = one(`SELECT COUNT(*) n, COALESCE(SUM(amount_luna),0) luna, COALESCE(SUM(amount_usdt),0) usdt, COALESCE(SUM(usd_value),0) usd,
     COUNT(DISTINCT buyer_address) buyers FROM orders WHERE creator_id = ? AND status = 'paid'`, me.id)
+  const DAY = 86400_000
+  const since = Math.floor(now() / DAY) * DAY - 13 * DAY
+  const dayRows = all(`SELECT CAST((paid_at - ?) / ${DAY} AS INTEGER) d, SUM(usd_value) usd, COUNT(*) n FROM orders
+    WHERE creator_id = ? AND status = 'paid' AND paid_at >= ? GROUP BY d`, since, me.id, since)
+  const daily = Array.from({ length: 14 }, (_, i) => {
+    const r = dayRows.find((x) => x.d === i)
+    return { day: since + i * DAY, usd: r ? Math.round(r.usd * 100) / 100 : 0, sales: r ? r.n : 0 }
+  })
+  const revenue = Object.fromEntries(all(`SELECT product_id, SUM(usd_value) usd FROM orders WHERE creator_id = ? AND status = 'paid' GROUP BY product_id`, me.id).map((r) => [r.product_id, Math.round(r.usd * 100) / 100]))
+  const tips = one(`SELECT COALESCE(SUM(tip_usd),0) t FROM orders WHERE creator_id = ? AND status = 'paid'`, me.id).t
   const week = one(`SELECT COALESCE(SUM(usd_value),0) usd, COUNT(*) n FROM orders WHERE creator_id = ? AND status = 'paid' AND paid_at > ?`, me.id, now() - 7 * 86400_000)
   return c.json({
     creator: { ...publicCreator(me), name: me.name, evmAddress: me.evm_address },
     network: me.session_network,
-    products: products.map((p) => publicProduct(p)),
-    sales,
-    totals: { sales: tot.n, nim: tot.luna / LUNA, usdt: tot.usdt / 1e6, usd: Math.round(tot.usd * 100) / 100, buyers: tot.buyers, weekUsd: Math.round(week.usd * 100) / 100, weekSales: week.n },
+    products: products.map((p) => publicProduct(p, { views: p.views, revenue: revenue[p.id] || 0 })),
+    sales, daily,
+    totals: { sales: tot.n, nim: tot.luna / LUNA, usdt: tot.usdt / 1e6, usd: Math.round(tot.usd * 100) / 100, buyers: tot.buyers, tipsUsd: Math.round(tips * 100) / 100, weekUsd: Math.round(week.usd * 100) / 100, weekSales: week.n },
   })
 })
 
@@ -179,19 +191,23 @@ app.post('/api/products', bodyLimit({ maxSize: MAX_FILE + 8 * 1024 * 1024, onErr
   if (!Number.isFinite(amount) || amount <= 0) return err(c, 400, 'Set a price above zero.')
   const min = { USD: 0.1, NGN: 100, NIM: 100 }[currency]
   if (amount < min) return err(c, 400, `The lowest price is ${min} ${currency}.`)
-  let file, cover
+  const kind = b.kind === 'link' ? 'link' : 'file'
+  const secret = clean(b.secret, 2000)
+  if (kind === 'link' && !secret) return err(c, 400, 'Add the link or message buyers unlock.')
+  let file = null, cover
   try {
-    file = await saveUpload(b.file, FILES_DIR, MAX_FILE)
+    if (kind === 'file') file = await saveUpload(b.file, FILES_DIR, MAX_FILE)
     cover = await saveUpload(b.cover, COVERS_DIR, 6 * 1024 * 1024)
   } catch (e) { return err(c, e.status || 400, e.message) }
-  if (!file) return err(c, 400, 'Attach the file buyers will get.')
+  if (kind === 'file' && !file) return err(c, 400, 'Attach the file buyers will get.')
   if (cover && !/^image\//.test(cover.mime)) return err(c, 400, 'The cover must be an image.')
   const pid = id(8)
   const hue = crypto.createHash('sha1').update(title).digest()[0] * 360 / 256 | 0
-  run(`INSERT INTO products (id, creator_id, title, description, price_amount, price_currency, accept_usdt, file_path, file_name, file_size, file_mime, cover_path, hue, network, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    pid, me.id, title, clean(b.description, 2000), amount, currency, b.acceptUsdt === 'true' && me.evm_address && currency !== 'NIM' ? 1 : 0,
-    file.path, file.name, file.size, file.mime, cover?.path || null, hue, me.session_network, now())
+  run(`INSERT INTO products (id, creator_id, title, description, kind, secret, pwyw, price_amount, price_currency, accept_usdt, file_path, file_name, file_size, file_mime, cover_path, hue, network, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    pid, me.id, title, clean(b.description, 2000), kind, kind === 'link' ? secret : null, b.pwyw === 'true' ? 1 : 0,
+    amount, currency, b.acceptUsdt === 'true' && me.evm_address && currency !== 'NIM' ? 1 : 0,
+    file?.path || null, file?.name || null, file?.size || null, file?.mime || null, cover?.path || null, hue, me.session_network, now())
   return c.json({ product: publicProduct(one('SELECT * FROM products WHERE id = ?', pid)) })
 })
 
@@ -206,7 +222,30 @@ app.patch('/api/products/:id', async (c) => {
   const amount = b.amount !== undefined && Number(b.amount) > 0 ? Number(b.amount) : p.price_amount
   const currency = ['USD', 'NGN', 'NIM'].includes(b.currency) ? b.currency : p.price_currency
   const acceptUsdt = b.acceptUsdt !== undefined ? (b.acceptUsdt && me.evm_address && currency !== 'NIM' ? 1 : 0) : p.accept_usdt
-  run('UPDATE products SET title = ?, description = ?, price_amount = ?, price_currency = ?, accept_usdt = ? WHERE id = ?', title, description, amount, currency, acceptUsdt, p.id)
+  const pwyw = b.pwyw !== undefined ? (b.pwyw ? 1 : 0) : p.pwyw
+  const secret = p.kind === 'link' && b.secret !== undefined ? clean(b.secret, 2000) || p.secret : p.secret
+  run('UPDATE products SET title = ?, description = ?, price_amount = ?, price_currency = ?, accept_usdt = ?, pwyw = ?, secret = ? WHERE id = ?', title, description, amount, currency, acceptUsdt, pwyw, secret, p.id)
+  return c.json({ product: publicProduct(one('SELECT * FROM products WHERE id = ?', p.id)) })
+})
+
+app.get('/api/products/:id/edit', (c) => {
+  const me = auth(c)
+  if (!me) return err(c, 401, 'Sign in first.')
+  const p = one('SELECT * FROM products WHERE id = ? AND creator_id = ?', c.req.param('id'), me.id)
+  if (!p) return err(c, 404, 'Not found.')
+  return c.json({ product: publicProduct(p, { secret: p.secret }), hasUsdt: !!me.evm_address })
+})
+
+app.post('/api/products/:id/cover', bodyLimit({ maxSize: 8 * 1024 * 1024, onError: (c) => err(c, 413, 'Cover is too big (6 MB max).') }), async (c) => {
+  const me = auth(c)
+  if (!me) return err(c, 401, 'Sign in first.')
+  const p = one('SELECT * FROM products WHERE id = ? AND creator_id = ?', c.req.param('id'), me.id)
+  if (!p) return err(c, 404, 'Not found.')
+  const b = await c.req.parseBody()
+  let cover
+  try { cover = await saveUpload(b.cover, COVERS_DIR, 6 * 1024 * 1024) } catch (e) { return err(c, e.status || 400, e.message) }
+  if (!cover || !/^image\//.test(cover.mime)) return err(c, 400, 'Pick an image.')
+  run('UPDATE products SET cover_path = ? WHERE id = ?', cover.path, p.id)
   return c.json({ product: publicProduct(one('SELECT * FROM products WHERE id = ?', p.id)) })
 })
 
@@ -223,6 +262,8 @@ app.get('/api/products/:id', async (c) => {
   const p = one('SELECT * FROM products WHERE id = ?', c.req.param('id'))
   if (!p) return err(c, 404, 'This item is not on the shelf.')
   const cr = one('SELECT * FROM creators WHERE id = ?', p.creator_id)
+  const viewer = auth(c)
+  if (viewer?.id !== p.creator_id) run('UPDATE products SET views = views + 1 WHERE id = ?', p.id)
   let q = null
   try { q = await quote(p) } catch {}
   return c.json({ product: publicProduct(p, { acceptUsdt: !!(p.accept_usdt && cr.evm_address) }), creator: publicCreator(cr), quote: q })
@@ -239,11 +280,15 @@ app.get('/api/stall/:handle', (c) => {
 
 app.get('/api/explore', (c) => {
   const products = all(`SELECT p.*, c.name cname, c.handle chandle FROM products p JOIN creators c ON c.id = p.creator_id
-    WHERE p.active = 1 AND p.network = 'mainnet' ORDER BY p.created_at DESC LIMIT 24`)
-  const stats = one(`SELECT COUNT(*) sales, COALESCE(SUM(usd_value),0) usd, COUNT(DISTINCT creator_id) creators FROM orders WHERE status = 'paid' AND network = 'mainnet'`)
+    WHERE p.active = 1 AND p.network = ? ORDER BY p.created_at DESC LIMIT 24`, EXPLORE_NET)
+  const stats = one(`SELECT COUNT(*) sales, COALESCE(SUM(usd_value),0) usd, COUNT(DISTINCT creator_id) creators FROM orders WHERE status = 'paid' AND network = ?`, EXPLORE_NET)
+  const recent = all(`SELECT o.paid_at, o.chain, o.amount_luna, o.amount_usdt, o.usd_value, p.id pid, p.title, c.name cname FROM orders o
+    JOIN products p ON p.id = o.product_id JOIN creators c ON c.id = o.creator_id
+    WHERE o.status = 'paid' AND o.network = ? ORDER BY o.paid_at DESC LIMIT 8`, EXPLORE_NET)
   return c.json({
     products: products.map((p) => publicProduct(p, { creator: { name: p.cname || 'A Stall creator', handle: p.chandle } })),
     stats: { sales: stats.sales, usd: Math.round(stats.usd * 100) / 100, creators: stats.creators },
+    recent: recent.map((r) => ({ at: r.paid_at, title: r.title, productId: r.pid, creator: r.cname || 'A creator', usd: r.usd_value, amount: r.chain === 'nim' ? Math.round(r.amount_luna / 1e5) + ' NIM' : (r.amount_usdt / 1e6).toFixed(2) + ' USDT' })),
   })
 })
 
@@ -270,14 +315,17 @@ app.post('/api/orders', async (c) => {
   const cr = one('SELECT * FROM creators WHERE id = ?', p.creator_id)
   const chain = b.chain === 'usdt' ? 'usdt' : 'nim'
   if (chain === 'usdt' && !(p.accept_usdt && cr.evm_address)) return err(c, 400, 'This creator takes NIM only.')
+  let tipUsd = Number(b.tipUsd) || 0
+  if (!p.pwyw || tipUsd < 0) tipUsd = 0
+  tipUsd = Math.min(Math.round(tipUsd * 100) / 100, 500)
   let q
-  try { q = await quote(p) } catch { return err(c, 503, 'Could not get the NIM price right now. Try again in a minute.') }
+  try { q = await quote(p, tipUsd) } catch { return err(c, 503, 'Could not get the NIM price right now. Try again in a minute.') }
   const oid = id(10)
   const memo = `STALL ${oid}`
   const payTo = chain === 'nim' ? cr.address : cr.evm_address
-  run(`INSERT INTO orders (id, product_id, creator_id, chain, network, amount_luna, amount_usdt, usd_value, memo, pay_to, receipt_key, created_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    oid, p.id, cr.id, chain, p.network, chain === 'nim' ? q.luna : null, chain === 'usdt' ? q.usdtUnits : null, q.usd, memo, payTo, id(24), now(), now() + ORDER_TTL)
+  run(`INSERT INTO orders (id, product_id, creator_id, chain, network, amount_luna, amount_usdt, usd_value, tip_usd, memo, pay_to, receipt_key, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    oid, p.id, cr.id, chain, p.network, chain === 'nim' ? q.luna : null, chain === 'usdt' ? q.usdtUnits : null, q.usd, tipUsd, memo, payTo, id(24), now(), now() + ORDER_TTL)
   const o = one('SELECT * FROM orders WHERE id = ?', oid)
   return c.json({ order: orderView(o, true), quote: q })
 })
@@ -285,7 +333,7 @@ app.post('/api/orders', async (c) => {
 function orderView(o, withKey = false) {
   return {
     id: o.id, chain: o.chain, network: o.network, status: o.status, memo: o.memo, payTo: o.chain === 'nim' ? prettyAddr(o.pay_to) : o.pay_to,
-    luna: o.amount_luna, usdtUnits: o.amount_usdt, usd: o.usd_value, txHash: o.tx_hash, buyer: o.buyer_address,
+    luna: o.amount_luna, usdtUnits: o.amount_usdt, usd: o.usd_value, tipUsd: o.tip_usd, txHash: o.tx_hash, buyer: o.buyer_address,
     expiresAt: o.expires_at, paidAt: o.paid_at, downloads: o.downloads, ...(withKey ? { key: o.receipt_key } : {}),
   }
 }
@@ -320,7 +368,7 @@ app.get('/api/orders/:id', (c) => {
   if (!o || c.req.query('k') !== o.receipt_key) return err(c, 404, 'Receipt not found.')
   const p = one('SELECT * FROM products WHERE id = ?', o.product_id)
   const cr = one('SELECT * FROM creators WHERE id = ?', o.creator_id)
-  return c.json({ order: orderView(o, true), product: publicProduct(p), creator: publicCreator(cr) })
+  return c.json({ order: orderView(o, true), product: publicProduct(p), creator: publicCreator(cr), secret: o.status === 'paid' && p.kind === 'link' ? p.secret : null })
 })
 
 app.get('/api/download/:id', (c) => {
@@ -337,6 +385,55 @@ app.get('/api/download/:id', (c) => {
   c.header('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(p.file_name)}`)
   c.header('Cache-Control', 'private, no-store')
   return c.body(Readable.toWeb(fs.createReadStream(f)))
+})
+
+// buyers prove they own the paying wallet and get every receipt back on a new device
+app.post('/api/purchases/recover', async (c) => {
+  const b = await c.req.json().catch(() => ({}))
+  const ch = one('SELECT * FROM challenges WHERE nonce = ?', String(b.nonce || ''))
+  if (!ch) return err(c, 400, 'This code expired. Try again.')
+  run('DELETE FROM challenges WHERE nonce = ?', ch.nonce)
+  if (!verifyNimiqSignature(ch.message, String(b.publicKey || ''), String(b.signature || '')))
+    return err(c, 401, 'The signature did not check out.')
+  const address = addressFromPublicKey(b.publicKey)
+  const rows = all(`SELECT o.id, o.receipt_key, o.paid_at, p.title FROM orders o JOIN products p ON p.id = o.product_id
+    WHERE o.buyer_address = ? AND o.status = 'paid' ORDER BY o.paid_at DESC LIMIT 200`, address)
+  return c.json({ address, receipts: rows.map((r) => ({ id: r.id, key: r.receipt_key, title: r.title, at: r.paid_at })) })
+})
+
+let poolCache = { at: 0, list: [] }
+async function pools() {
+  if (Date.now() - poolCache.at < 30 * 60_000 && poolCache.list.length) return poolCache.list
+  try {
+    const r = await fetch('https://validators-api-main.je-cf9.workers.dev/api/v1/validators?only-pools=true', { signal: AbortSignal.timeout(10_000) })
+    const list = (await r.json())
+      .filter((v) => v.payoutType && v.payoutType !== 'none' && v.score?.dataStatus !== 'stale')
+      .sort((a, b) => (b.score?.total || 0) - (a.score?.total || 0))
+      .map((v) => ({ name: v.name, address: v.address, fee: v.fee, payoutType: v.payoutType, score: Math.round((v.score?.total || 0) * 100), color: v.accentColor || null, website: v.website || null }))
+    if (list.length) poolCache = { at: Date.now(), list }
+  } catch { /* keep cache */ }
+  return poolCache.list
+}
+
+app.get('/api/staking', async (c) => {
+  const me = auth(c)
+  if (!me) return err(c, 401, 'Sign in first.')
+  const net = me.session_network
+  let staker = null
+  try {
+    const r = await fetch(NIM_RPC[net], { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getStakerByAddress', params: [me.address] }) })
+    const j = await r.json()
+    if (j.result?.data) staker = { delegation: j.result.data.delegation ? prettyAddr(j.result.data.delegation) : null, active: (j.result.data.balance ?? j.result.data.activeBalance ?? 0) / LUNA, inactive: ((j.result.data.inactiveBalance || 0) + (j.result.data.retiredBalance || 0)) / LUNA }
+  } catch {}
+  let list
+  if (net === 'testnet') {
+    try {
+      const r = await fetch(NIM_RPC.testnet, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getActiveValidators', params: [] }) })
+      list = (await r.json()).result.data.slice(0, 4).map((v, i) => ({ name: `Testnet validator ${i + 1}`, address: prettyAddr(v.address), fee: 0, payoutType: 'testnet', score: 100 }))
+    } catch { list = [] }
+  } else list = await pools()
+  return c.json({ network: net, staker, pools: list.slice(0, 8) })
 })
 
 if (process.env.DEV_WALLET === '1' && process.env.NODE_ENV !== 'production') {

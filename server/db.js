@@ -74,6 +74,15 @@ CREATE INDEX IF NOT EXISTS orders_creator ON orders(creator_id, status);
 CREATE INDEX IF NOT EXISTS products_creator ON products(creator_id, active);
 `)
 
-export const one = (sql, ...a) => db.prepare(sql).get(...a)
+// additive migrations
+for (const sql of [
+  "ALTER TABLE products ADD COLUMN secret TEXT",
+  "ALTER TABLE products ADD COLUMN pwyw INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE products ADD COLUMN views INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE orders ADD COLUMN tip_usd REAL NOT NULL DEFAULT 0",
+]) { try { db.exec(sql) } catch { /* column exists */ } }
+db.exec("CREATE INDEX IF NOT EXISTS orders_buyer ON orders(buyer_address, status)")
+
+export const one =(sql, ...a) => db.prepare(sql).get(...a)
 export const all = (sql, ...a) => db.prepare(sql).all(...a)
 export const run = (sql, ...a) => db.prepare(sql).run(...a)

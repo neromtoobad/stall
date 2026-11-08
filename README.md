@@ -24,6 +24,16 @@ Creators in places like Nigeria have a hard time getting paid online. Card check
 6. **The buyer gets a receipt.** It's a paper-style receipt with a download link, kept on the device under *My purchases*.
 7. **The creator sees earnings.** The dashboard shows total earned (NIM, USDT and the $ value), sales this week, buyers, and every sale with a link to the explorer.
 
+## Also in v2
+
+- **Private links and messages.** A product can be a secret instead of a file, such as a class invite, a Notion page, a licence key or a WhatsApp group link. It shows on the receipt only after the payment is confirmed.
+- **Pay what you want.** Creators can let fans tip on top of the price (+$2.50, +$5 or any amount). Tips go to the creator in the same payment and show on the receipt and dashboard.
+- **Grow your earnings.** The dashboard reads your staker account over RPC and suggests a top-scored Nimiq staking pool. One tap sends `sendNewStakerTransaction`, or `sendStakeTransaction` if you already stake. The NIM stays in your wallet, and staking rewards come from the network.
+- **Recover purchases.** On a new phone, buyers sign with the wallet they paid from and every receipt comes back.
+- **Analytics.** The dashboard has a 14-day earnings chart plus page views, conversion and revenue for each product.
+- **Edit anything.** You can change the name, description, price, secret or cover after listing, or take a product off the shelf.
+- **Share sheet** with buttons for WhatsApp, X, copy link and the native share.
+
 Anyone can still pay with a different Nimiq wallet. The product page shows the amount, address and message to send, then takes the transaction hash.
 
 ## Nimiq Pay integration
@@ -35,6 +45,8 @@ Anyone can still pay with a different Nimiq wallet. The product page shows the a
 | USDT checkout | `window.ethereum`: `eth_requestAccounts`, `wallet_switchEthereumChain` (0x89), `eth_sendTransaction` with a viem-encoded `transfer` |
 | Network awareness | `getHostNetwork()`, so testnet listings are kept apart and labelled |
 | Errors | `NimiqProviderError` types: cancelling is calm and the screen stays usable |
+| Staking earnings | `sendNewStakerTransaction()` / `sendStakeTransaction()` + RPC `getStakerByAddress` + the validators API |
+| Purchase recovery | `nimiq.sign()` → orders paid from that address |
 | Sharing | `nimpay.app/miniapps/open/…` deeplinks |
 
 ## Stack

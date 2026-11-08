@@ -92,3 +92,11 @@ export async function nimBalance(addr: string): Promise<number | null> {
   if (!n || typeof n.getBalance !== 'function') return null
   try { return (await n.getBalance(addr)) / 100_000 } catch { return null }
 }
+
+export async function stakeNim(delegation: string, luna: number, existing: boolean) {
+  const n = await nimiq()
+  if (!n) throw new Error('Open Stall inside Nimiq Pay to stake.')
+  return existing
+    ? n.sendStakeTransaction({ value: luna })
+    : n.sendNewStakerTransaction({ delegation, value: luna })
+}
