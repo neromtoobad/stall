@@ -634,7 +634,7 @@ async function productPage(pid: string) {
   const link = origin() + '/p/' + p.id
   const mine = store.get('token') ? await api('/api/me').then((m) => m.creator.id === c.id).catch(() => false) : false
   const stallHref = c.handle ? '/@' + c.handle : '/s/' + c.id
-  const priceLine = q ? `≈ ${fmtNim(q.nim)}${p.price.currency !== 'USD' ? ' · ' + fmtUsd(q.usd) : ''}${p.price.currency !== 'NGN' ? ' · ' + fmtNgn(q.ngn) : ''}` : ''
+  const priceLine = q ? (p.price.currency === 'NIM' ? `≈ ${fmtUsd(q.usd)} · ${fmtNgn(q.ngn)}` : `≈ ${fmtNim(q.nim)}${p.price.currency !== 'USD' ? ' · ' + fmtUsd(q.usd) : ''}${p.price.currency !== 'NGN' ? ' · ' + fmtNgn(q.ngn) : ''}`) : ''
   render(`${header(mine ? `<a class="link" href="/edit/${p.id}" data-link>Edit</a>` : `<a class="link" href="/purchases" data-link>Purchases</a>`)}
   <main class="wrap product ${p.active && !mine ? 'with-buybar' : ''}">
     ${isNew ? `<div class="notice"><b>It's live.</b> Share this link and you'll see each sale on your dashboard.<div class="notice-actions"><button class="btn sm primary" data-share>${I.share} Share</button><a class="btn sm ghost" href="/" data-link>Dashboard</a></div></div>` : ''}
@@ -660,7 +660,7 @@ async function productPage(pid: string) {
     ${mine ? `<div class="notice">This is your product. Buyers see a pay button here.</div>` : ''}
   </main>
   ${p.active && !mine ? `<div class="buybar" id="buybar">
-    <div class="bb-price"><b>${fmtPrice(p.price)}${p.pwyw ? '+' : ''}</b><span class="muted mono">${q ? fmtNim(q.nim) : ''}</span></div>
+    <div class="bb-price"><b>${fmtPrice(p.price)}${p.pwyw ? '+' : ''}</b><span class="muted mono">${q ? (p.price.currency === 'NIM' ? '≈ ' + fmtUsd(q.usd) : fmtNim(q.nim)) : ''}</span></div>
     <button class="btn primary lg" id="buy">Buy now</button>
   </div>` : ''}`)
 
