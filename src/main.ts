@@ -44,6 +44,15 @@ const I = {
   wa: '<svg viewBox="0 0 24 24"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a4 4 0 0 1-1.8-1.8l.8-1-1-2z" fill="currentColor" stroke="none"/></svg>',
   x: '<svg viewBox="0 0 24 24"><path d="M4 4l16 16M20 4L4 20"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></svg>',
+  out: '<svg viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10"/></svg>',
+  chev: '<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>',
+  inn: '<svg viewBox="0 0 24 24"><path d="M17 7 7 17M7 9v8h8"/></svg>',
+  shield: '<svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/></svg>',
+  up: '<svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg>',
+  key: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/></svg>',
 }
 
 async function api<T = any>(path: string, opts: RequestInit & { json?: unknown } = {}): Promise<T> {
@@ -116,8 +125,8 @@ const receipts = {
 // ---------- shared chrome ----------
 
 const awning = `<div class="awning" aria-hidden="true"></div>`
-function header(right = '') {
-  return `${awning}<header class="bar"><a href="/" class="logo" data-link aria-label="Stall home">${MARK}stall</a><div class="bar-right">${right}</div></header>`
+function header(right = '', withAwning = false) {
+  return `${withAwning ? awning : ''}<header class="bar"><a href="/" class="logo" data-link aria-label="Stall home">${MARK}stall</a><div class="bar-right">${right}</div></header>`
 }
 function tabs(active: 'home' | 'sell' | 'buy') {
   const signed = !!store.get('token')
@@ -127,6 +136,9 @@ function tabs(active: 'home' | 'sell' | 'buy') {
     <a href="/purchases" data-link class="${active === 'buy' ? 'on' : ''}">${I.bag}<span>Purchases</span></a>
   </nav>`
 }
+const hueOf = (s: string) => ((s || 'S').charCodeAt(0) * 37 + (s.length || 1) * 11) % 360
+const av = (name: string, cls = 'av') => `<span class="${cls}" style="--h:${hueOf(name)}">${esc((name || 'S').trim().slice(0, 1).toUpperCase())}</span>`
+const greet = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening' }
 const netBadge = (net: string) => net === 'testnet' ? `<span class="badge test">Testnet</span>` : ''
 
 function cover(p: { cover: string | null; title: string; hue: number; kind?: string }, cls = '') {
@@ -228,25 +240,20 @@ async function home() {
 }
 
 function heroArt() {
-  const items = [
-    { t: 'Preset pack', p: '₦1,500', h: 32 },
-    { t: 'Beat tape', p: '$4', h: 280 },
-    { t: 'Exam notes', p: '900 NIM', h: 150 },
-  ]
-  return `<div class="stallfront" aria-hidden="true">
-    <div class="shelf">${items.map((it, i) => `
-      <div class="good" style="--i:${i}">
-        <div class="cover gen" style="--h:${it.h}"><span>${it.t[0]}</span></div>
-        <b>${it.t}</b>
-        <span class="tag">${it.p}</span>
-      </div>`).join('')}</div>
-    <div class="counter"></div>
-    <div class="mini-receipt"><span class="stamp">PAID</span><i></i><i></i><i class="s"></i></div>
+  const bars = [2, 3, 2, 4, 3, 5, 4, 6, 5, 7, 6, 8, 7, 10]
+  return `<div class="demo" aria-hidden="true">
+    <div class="demo-card">
+      <div class="bal-top"><span class="label">Total earned</span><span class="pill flat">Example</span></div>
+      <p class="bal">₦212,400</p>
+      <p class="bal-sub"><span class="pill up">${I.up} ₦48,500 this week</span></p>
+      <div class="demo-bars">${bars.map((h, i) => `<i style="--h:${h * 10}%;--i:${i}" class="${i === bars.length - 1 ? 't' : ''}"></i>`).join('')}</div>
+    </div>
+    <div class="demo-toast"><span class="ric in">${I.inn}</span><div><b>Preset pack sold</b><span>+4,299 NIM · just now</span></div></div>
   </div>`
 }
 
 async function landing() {
-  render(`${header(`<button class="link" id="signin2">Sign in</button>`)}
+  render(`${header(`<button class="btn sm" id="signin2">Sign in</button>`, true)}
   <main class="wrap">
     <section class="hero">
       ${heroArt()}
@@ -317,75 +324,89 @@ async function dashboard() {
   const t = me.totals
   const stallUrl = origin() + (c.handle ? '/@' + c.handle : '/s/' + c.id)
   const views = me.products.reduce((a: number, p: any) => a + (p.views || 0), 0)
-  render(`${header(`<button class="link" id="out">Sign out</button>`)}
+  const sold = me.products.reduce((a: number, p: any) => a + (p.sold || 0), 0)
+  const [whole, cents] = fmtUsd(t.usd).split('.')
+  render(`<header class="bar">
+    <div class="me">${av(c.name)}<div><span class="muted">${greet()}</span><b>${esc(c.name)}</b></div></div>
+    <div class="bar-right">${netBadge(me.network)}<button class="icon-btn" id="out" aria-label="Sign out">${I.out}</button></div>
+  </header>
   <main class="wrap">
-    <div class="hello"><div><p class="eyebrow">Your stall ${netBadge(me.network)}</p><h1>${esc(c.name)}</h1></div>
-      <button class="chip" id="share-stall">${I.share} Share</button></div>
-    <section class="earn">
-      <div class="earn-top"><div><p class="label">Earned so far</p><p class="big">${fmtUsd(t.usd)}</p></div>
-        ${t.weekSales ? `<span class="wk">+${fmtUsd(t.weekUsd)} this week</span>` : ''}</div>
+    <section class="balance">
+      <div class="bal-top"><span class="label">Total earned</span>
+        ${t.weekSales ? `<span class="pill up">${I.up} ${fmtUsd(t.weekUsd)} this week</span>` : `<span class="pill flat">No sales this week</span>`}</div>
+      <p class="bal">${whole}${cents ? `<small>.${cents}</small>` : ''}</p>
+      <p class="bal-sub">${fmtNim(t.nim)}${t.usdt ? ` · ${nf(t.usdt, 2)} USDT` : ''} · ${t.sales} ${t.sales === 1 ? 'sale' : 'sales'}</p>
       ${chart(me.daily)}
-      <div class="earn-row">
-        <div><span class="num">${fmtNim(t.nim)}</span><span class="muted">in NIM</span></div>
-        ${t.usdt ? `<div><span class="num">${nf(t.usdt, 2)}</span><span class="muted">USDT</span></div>` : ''}
-        <div><span class="num">${t.sales}</span><span class="muted">${t.sales === 1 ? 'sale' : 'sales'}</span></div>
-        <div><span class="num">${t.buyers}</span><span class="muted">${t.buyers === 1 ? 'buyer' : 'buyers'}</span></div>
-        ${t.tipsUsd ? `<div><span class="num">${fmtUsd(t.tipsUsd)}</span><span class="muted">in tips</span></div>` : ''}
+      <div class="actions">
+        <a class="act main" href="/new" data-link><i>${I.plus}</i>Add</a>
+        <button class="act" id="share-stall"><i>${I.share}</i>Share</button>
+        <button class="act act-grow" id="grow"><i>${I.leaf}</i>Grow</button>
+        <a class="act" href="/setup" data-link><i>${I.user}</i>Profile</a>
       </div>
-      <p class="week">Paid to <span class="mono">${esc(short(c.address))}</span>${views ? ` · ${nf(views)} page views` : ''}</p>
+    </section>
+    <section class="tiles">
+      <div class="tile"><span>Page views</span><b>${nf(views)}</b></div>
+      <div class="tile"><span>Buy rate</span><b>${views ? Math.round((sold / views) * 100) + '%' : '–'}</b></div>
+      <div class="tile"><span>${t.tipsUsd ? 'Tips' : 'Buyers'}</span><b>${t.tipsUsd ? fmtUsd(t.tipsUsd) : nf(t.buyers)}</b></div>
     </section>
     <section id="stake"></section>
     <section>
-      <div class="sec-head"><h2>Products</h2><a class="link" href="/new" data-link>+ Add</a></div>
+      <div class="sec-head"><h2>Products</h2><a class="link" href="/new" data-link>${I.plus} New</a></div>
       ${me.products.length ? `<div class="list">${me.products.map((p: any) => `
         <div class="row">
           <a href="/p/${p.id}" data-link class="row-main">${cover(p, 'sm')}<div><h3>${esc(p.title)}</h3>
-            <p class="muted">${fmtPrice(p.price)}${p.pwyw ? '+' : ''} · ${p.sold} sold${p.revenue ? ' · ' + fmtUsd(p.revenue) : ''}</p>
-            <p class="conv">${p.views ? `${nf(p.views)} views · ${Math.round((p.sold / p.views) * 100)}% buy` : 'No views yet. Share it!'}</p></div></a>
+            <p class="conv">${fmtPrice(p.price)}${p.pwyw ? '+' : ''} · ${p.views ? `${nf(p.views)} ${p.views === 1 ? "view" : "views"} · <b>${p.sold} sold</b>` : 'No views yet'}</p></div></a>
           <a class="icon-btn" href="/edit/${p.id}" data-link aria-label="Edit ${esc(p.title)}">${I.edit}</a>
           <button class="icon-btn" data-share="${p.id}" data-title="${esc(p.title)}" aria-label="Share ${esc(p.title)}">${I.share}</button>
         </div>`).join('')}</div>`
       : `<div class="empty small"><p>Nothing on the shelf yet.</p><a class="btn primary" href="/new" data-link>Add your first product</a></div>`}
     </section>
     <section>
-      <div class="sec-head"><h2>Recent sales</h2></div>
+      <div class="sec-head"><h2>Activity</h2><span class="muted small">Paid to <span class="mono">${esc(short(c.address))}</span></span></div>
       ${me.sales.length ? `<div class="list">${me.sales.map((s: any) => `
-        <a class="row sale" href="${s.chain === 'nim' ? nimWatch(s.network, s.tx_hash) : polyScan(s.tx_hash)}" target="_blank" rel="noopener">
-          <div><h3>${esc(s.title)}</h3><p class="muted mono">${esc(short(s.buyer_address || ''))} · ${ago(s.paid_at)}</p></div>
-          <span class="amt">+${s.chain === 'nim' ? fmtNim(s.amount_luna / 1e5) : nf(s.amount_usdt / 1e6, 2) + ' USDT'}</span>
+        <a class="row" href="${s.chain === 'nim' ? nimWatch(s.network, s.tx_hash) : polyScan(s.tx_hash)}" target="_blank" rel="noopener">
+          <span class="ric in">${I.inn}</span>
+          <div><h3>${esc(s.title)}</h3><p class="muted">${ago(s.paid_at)} · from <span class="mono">${esc(short(s.buyer_address || '', 4))}</span></p></div>
+          <span class="amt">+${s.chain === 'nim' ? fmtNim(s.amount_luna / 1e5) : nf(s.amount_usdt / 1e6, 2) + ' USDT'}<small>${fmtUsd(s.usd_value || 0)}</small></span>
         </a>`).join('')}</div>`
       : `<div class="empty small"><p>Sales show up here the moment they confirm on-chain.</p></div>`}
     </section>
-    <section class="settings-link"><a href="/setup" data-link class="link">Edit profile and payout options</a></section>
   </main>`, 'home')
   $('#out').onclick = () => { store.del('token'); nimiq().then((n) => n?.disconnect?.()); go('/') }
   $('#share-stall').onclick = () => shareSheet(stallUrl, c.name + "'s stall", 'paid in NIM')
   $$<HTMLButtonElement>('[data-share]').forEach((b) => b.onclick = () => shareSheet(origin() + '/p/' + b.dataset.share, b.dataset.title!))
-  stakeCard(c.address, t.nim)
+  const staking = stakeCard(c.address, t.nim)
+  $('#grow').onclick = async () => {
+    const s = await staking
+    if (s) stakeSheet(s.info, s.bal, s.existing)
+    else toast('Could not load staking right now. Try again soon.', 'err')
+  }
 }
 
 // ---------- staking: put earnings to work ----------
 
 async function stakeCard(address: string, earnedNim: number) {
   const box = $('#stake')
-  if (!box) return
+  if (!box) return null
   let info: any, bal: number | null
-  try { [info, bal] = await Promise.all([api('/api/staking'), nimBalance(address)]) } catch { return }
-  if (!box.isConnected) return
+  try { [info, bal] = await Promise.all([api('/api/staking'), nimBalance(address)]) } catch { return null }
   const st = info.staker
   const staked = st ? st.active + st.inactive : 0
   const pool = st?.delegation ? info.pools.find((p: any) => p.address.replace(/\s/g, '') === st.delegation.replace(/\s/g, '')) : null
-  box.innerHTML = `<div class="grow">
-    <div class="grow-ic">${I.leaf}</div>
-    <div class="grow-body">
-      <h3>${staked ? 'Your earnings are growing' : 'Put your earnings to work'}</h3>
-      <p class="muted small">${staked
-        ? `${fmtNim(staked)} staked${pool ? ' with ' + esc(pool.name) : ''}. Staking rewards come from the network and your NIM stays yours.`
-        : `Stake the NIM you earn with a staking pool and collect network rewards. ${bal !== null ? `You hold ${fmtNim(bal)}.` : earnedNim ? `You've earned ${fmtNim(earnedNim)} here.` : ''}`}</p>
-    </div>
-    <button class="btn sm ${staked ? 'ghost' : 'primary'}" id="stake-btn">${staked ? 'Add' : 'Stake'}</button>
-  </div>`
-  $('#stake-btn').onclick = () => stakeSheet(info, bal, !!st)
+  if (box.isConnected) {
+    box.innerHTML = `<div class="grow">
+      <div class="grow-ic">${I.leaf}</div>
+      <div class="grow-body">
+        <h3>${staked ? `${fmtNim(staked)} staked` : 'Put your earnings to work'}</h3>
+        <p class="muted">${staked
+          ? `Earning network rewards${pool ? ' with ' + esc(pool.name) : ''}. Your NIM stays yours.`
+          : `Stake NIM with a pool and collect network rewards. ${bal !== null ? `You hold ${fmtNim(bal)}.` : earnedNim ? `You've earned ${fmtNim(earnedNim)} here.` : ''}`}</p>
+      </div>
+      <button class="btn sm ${staked ? '' : 'primary'}" id="stake-btn">${staked ? 'Add' : 'Stake'}</button>
+    </div>`
+    $('#stake-btn').onclick = () => stakeSheet(info, bal, !!st)
+  }
+  return { info, bal, existing: !!st }
 }
 
 function stakeSheet(info: any, bal: number | null, existing: boolean) {
@@ -442,7 +463,7 @@ async function setup() {
       <label><span>One line about you <span class="muted">(optional)</span></span><textarea name="bio" maxlength="240" rows="2" placeholder="Lightroom presets shot in Lagos light.">${esc(c.bio)}</textarea></label>
       <div class="box">
         <div><h3>Also take USDT</h3><p class="muted">Buyers can pay in USDT on Polygon. It goes to your Nimiq Pay EVM address.</p></div>
-        <div id="usdt">${c.evmAddress ? `<p class="mono small">${esc(c.evmAddress)}</p><button type="button" class="btn ghost sm" id="usdt-off">Turn off</button>` : `<button type="button" class="btn ghost sm" id="usdt-on">Connect USDT address</button>`}</div>
+        <div id="usdt">${c.evmAddress ? `<p class="mono small">${esc(c.evmAddress)}</p><button type="button" class="btn sm" id="usdt-off">Turn off</button>` : `<button type="button" class="btn sm" id="usdt-on">Connect USDT address</button>`}</div>
       </div>
       <p class="fine">NIM payments go to <span class="mono">${esc(c.address)}</span>, the wallet you signed in with.</p>
       <button class="btn primary block lg">${c.name ? 'Save' : 'Continue'}</button>
@@ -635,13 +656,13 @@ async function productPage(pid: string) {
   const mine = store.get('token') ? await api('/api/me').then((m) => m.creator.id === c.id).catch(() => false) : false
   const stallHref = c.handle ? '/@' + c.handle : '/s/' + c.id
   const priceLine = q ? (p.price.currency === 'NIM' ? `≈ ${fmtUsd(q.usd)} · ${fmtNgn(q.ngn)}` : `≈ ${fmtNim(q.nim)}${p.price.currency !== 'USD' ? ' · ' + fmtUsd(q.usd) : ''}${p.price.currency !== 'NGN' ? ' · ' + fmtNgn(q.ngn) : ''}`) : ''
-  render(`${header(mine ? `<a class="link" href="/edit/${p.id}" data-link>Edit</a>` : `<a class="link" href="/purchases" data-link>Purchases</a>`)}
+  render(`${header(mine ? `<a class="btn sm" href="/edit/${p.id}" data-link>${I.edit} Edit</a>` : `<button class="icon-btn" data-share aria-label="Share">${I.share}</button>`)}
   <main class="wrap product ${p.active && !mine ? 'with-buybar' : ''}">
-    ${isNew ? `<div class="notice"><b>It's live.</b> Share this link and you'll see each sale on your dashboard.<div class="notice-actions"><button class="btn sm primary" data-share>${I.share} Share</button><a class="btn sm ghost" href="/" data-link>Dashboard</a></div></div>` : ''}
+    ${isNew ? `<div class="notice"><b>It's live.</b> Share this link and you'll see each sale on your dashboard.<div class="notice-actions"><button class="btn sm primary" data-share>${I.share} Share</button><a class="btn sm" href="/" data-link>Dashboard</a></div></div>` : ''}
     ${cover(p, 'hero')}
     <div class="p-head">
       <div><h1>${esc(p.title)}</h1>
-      <a class="by" href="${stallHref}" data-link>by <b>${esc(c.name)}</b></a></div>
+      <a class="by" href="${stallHref}" data-link>${av(c.name)}<span>by <b>${esc(c.name)}</b></span></a></div>
       ${netBadge(p.network)}
     </div>
     <div class="price-box">
@@ -653,10 +674,10 @@ async function productPage(pid: string) {
     <section class="file-line">${p.kind === 'link' ? I.link : I.file}<div>${p.kind === 'link'
       ? `<b>A private link or message</b><span class="muted">Revealed on your receipt right after payment</span>`
       : `<b>${esc(p.file?.name || 'File')}</b><span class="muted">${p.file ? fmtSize(p.file.size) + ' · ' : ''}instant download after payment</span>`}</div></section>
-    <section class="trust">
-      <p><b>How paying works.</b> Your payment goes straight to the creator's wallet <span class="mono">${esc(short(c.address))}</span>. Stall checks it on the Nimiq blockchain, then unlocks it for you. Stall takes no fee.</p>
+    <section class="trust">${I.shield}
+      <p><b>Paid straight to the creator.</b> Your payment goes to <span class="mono">${esc(short(c.address))}</span>, and Stall checks it on the Nimiq blockchain before unlocking. No fees.</p>
     </section>
-    <div class="center row-actions"><button class="btn ghost sm" data-share>${I.share} Share</button>${!inNimiqPay() && !mine && p.active ? `<button class="btn ghost sm" data-manual>Pay from another wallet</button>` : ''}</div>
+    ${!inNimiqPay() && !mine && p.active ? `<div class="center row-actions"><button class="btn sm" data-manual>Pay from another wallet</button></div>` : ''}
     ${mine ? `<div class="notice">This is your product. Buyers see a pay button here.</div>` : ''}
   </main>
   ${p.active && !mine ? `<div class="buybar" id="buybar">
@@ -683,8 +704,8 @@ function checkoutSheet(p: any, q: any) {
       <div class="chips" id="tips">${tips.map((t, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-tip="${t}">${t ? '+' + fmtUsd(t) : 'No tip'}</button>`).join('')}<button class="chip" data-tip="custom">Other</button></div>
       <div class="amt-in" id="tip-custom" hidden><span>+$</span><input inputmode="decimal" placeholder="5"></div>` : ''}
     <div class="total"><span>Total</span><b id="tot">${q ? fmtNim(q.nim) : fmtPrice(p.price)}</b></div>
-    <button class="btn primary block lg pay-btn" data-pay="nim"><span>Pay with NIM</span><span class="mono" id="tot-nim">${q ? fmtNim(q.nim) : ''}</span></button>
-    ${p.acceptUsdt ? `<button class="btn ghost block pay-btn" data-pay="usdt"><span>Pay with USDT</span><span class="mono" id="tot-usdt">${q ? nf(q.usd, 2) + ' USDT' : ''}</span></button>
+    <button class="btn primary block lg pay-btn" data-pay="nim"><span>Pay with NIM</span><span class="num" id="tot-nim">${q ? fmtNim(q.nim) : ''}</span></button>
+    ${p.acceptUsdt ? `<button class="btn ghost block pay-btn" data-pay="usdt"><span>Pay with USDT</span><span class="num" id="tot-usdt">${q ? nf(q.usd, 2) + ' USDT' : ''}</span></button>
       <p class="fine center">USDT goes over Polygon, so keep a little POL for gas.</p>` : ''}`)
   const upd = () => {
     if (!q) return
@@ -783,31 +804,36 @@ async function receiptPage(oid: string) {
   const amount = o.chain === 'nim' ? nf(o.luna / 1e5, 2) + ' NIM' : nf(o.usdtUnits / 1e6, 2) + ' USDT'
   render(`${header()}
   <main class="wrap narrow">
-    ${fresh ? `<p class="eyebrow center paid-line">Paid. It's yours.</p>` : ''}
+    <section class="success">
+      <div class="check-ring ${paid ? '' : 'wait'}">${paid ? I.check : I.clock}</div>
+      <p class="muted">${paid ? (fresh ? 'Payment confirmed' : 'Paid') : 'Waiting for payment'}</p>
+      <p class="sum">${amount}</p>
+      <p class="muted">${fmtUsd(o.usd)} to ${esc(c.name)}</p>
+    </section>
     <div class="slot ${fresh ? 'print' : ''}"><article class="receipt ${paid ? 'paid' : ''}">
-      <div class="r-top">${MARK}<div><b>Stall receipt</b><span class="mono">#${esc(o.id)}</span></div>${paid ? `<span class="stamp">PAID</span>` : `<span class="stamp pending">PENDING</span>`}</div>
+      <div class="r-top">${MARK}<div><b>Stall receipt</b><span class="mono">#${esc(o.id)}</span></div>${paid ? `<span class="stamp">Paid</span>` : `<span class="stamp pending">Pending</span>`}</div>
       <div class="r-item">${cover(p, 'sm')}<div><h3>${esc(p.title)}</h3><p class="muted">from ${esc(c.name)}</p></div></div>
       <dl class="r-lines">
-        <div><dt>Paid</dt><dd class="mono">${amount}</dd></div>
-        <div><dt>Worth</dt><dd class="mono">${fmtUsd(o.usd)}</dd></div>
-        ${o.tipUsd ? `<div><dt>incl. tip</dt><dd class="mono">${fmtUsd(o.tipUsd)} ♥</dd></div>` : ''}
-        <div><dt>Fee</dt><dd class="mono">0</dd></div>
+        <div><dt>Amount</dt><dd>${amount}</dd></div>
+        <div><dt>Value</dt><dd>${fmtUsd(o.usd)}</dd></div>
+        ${o.tipUsd ? `<div><dt>Includes tip</dt><dd>${fmtUsd(o.tipUsd)}</dd></div>` : ''}
+        <div><dt>Fee</dt><dd>None</dd></div>
         ${o.buyer ? `<div><dt>From</dt><dd class="mono">${esc(short(o.buyer, 6))}</dd></div>` : ''}
         <div><dt>To</dt><dd class="mono">${esc(short(o.payTo, 6))}</dd></div>
-        ${o.paidAt ? `<div><dt>Date</dt><dd>${new Date(o.paidAt).toLocaleString()}</dd></div>` : ''}
-        ${o.txHash ? `<div><dt>On-chain</dt><dd><a class="mono" target="_blank" rel="noopener" href="${o.chain === 'nim' ? nimWatch(o.network, o.txHash) : polyScan(o.txHash)}">${esc(short(o.txHash, 6))} ↗</a></dd></div>` : ''}
+        ${o.paidAt ? `<div><dt>Date</dt><dd>${new Date(o.paidAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</dd></div>` : ''}
+        ${o.txHash ? `<div><dt>On-chain</dt><dd><a class="mono" target="_blank" rel="noopener" href="${o.chain === 'nim' ? nimWatch(o.network, o.txHash) : polyScan(o.txHash)}">${esc(short(o.txHash, 6))}</a></dd></div>` : ''}
       </dl>
       <div class="zig" aria-hidden="true"></div>
     </article></div>
     ${!paid ? `<div class="notice">This payment hasn't confirmed yet. <a href="/p/${p.id}" data-link>Back to the product</a></div>`
-      : p.kind === 'link' ? `<section class="secret"><p class="label">Your unlock</p><div class="secret-body">${linkify(secret || '')}</div>
+      : p.kind === 'link' ? `<section class="secret"><p class="label">${I.key} Your unlock</p><div class="secret-body">${linkify(secret || '')}</div>
           <button class="btn ghost sm" id="cs">${I.copy} Copy</button></section>`
       : `<a class="btn primary block lg" href="${dl}" download>Download the file</a>
-         <p class="fine center mono">${esc(p.file?.name || '')}${p.file ? ' · ' + fmtSize(p.file.size) : ''}</p>
-         ${viewable ? `<a class="btn ghost block" href="${dl}&view=1" target="_blank" rel="noopener">Open it here</a>` : ''}
+         <p class="fine center">${esc(p.file?.name || '')}${p.file ? ' · ' + fmtSize(p.file.size) : ''}</p>
+         ${viewable ? `<a class="btn block" href="${dl}&view=1" target="_blank" rel="noopener">Open it here</a>` : ''}
          <button class="link center block" id="cp">Copy download link (open it in your browser)</button>`}
     ${paid ? `<p class="fine center">Saved under Purchases on this device. On a new phone, recover it with your wallet.</p>
-      <div class="center"><a class="link" href="${c.handle ? '/@' + c.handle : '/s/' + c.id}" data-link>More from ${esc(c.name)} →</a></div>` : ''}
+      <div class="center"><a class="link" href="${c.handle ? '/@' + c.handle : '/s/' + c.id}" data-link>More from ${esc(c.name)} ${I.chev}</a></div>` : ''}
   </main>`, 'buy')
   const cp = document.getElementById('cp'); if (cp) cp.onclick = () => copy(origin() + dl, 'Download link copied')
   const cs = document.getElementById('cs'); if (cs) cs.onclick = () => copy(secret || '', 'Copied')
@@ -818,7 +844,7 @@ function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const box = document.createElement('div')
   box.className = 'confetti'
-  box.innerHTML = Array.from({ length: 22 }, (_, i) => `<i style="--x:${(Math.random() * 2 - 1) * 160}px;--r:${Math.random() * 540}deg;--d:${0.6 + Math.random() * 0.6}s;--c:${['#E9B213', '#1F2348', '#1E9E8A', '#F6C9A8'][i % 4]};left:${45 + Math.random() * 10}%"></i>`).join('')
+  box.innerHTML = Array.from({ length: 22 }, (_, i) => `<i style="--x:${(Math.random() * 2 - 1) * 160}px;--r:${Math.random() * 540}deg;--d:${0.6 + Math.random() * 0.6}s;--c:${['#E9B213', '#1F2348', '#13A05F', '#BFC3D9'][i % 4]};left:${45 + Math.random() * 10}%"></i>`).join('')
   document.body.appendChild(box)
   setTimeout(() => box.remove(), 1800)
 }
@@ -828,11 +854,11 @@ async function purchasesPage() {
   render(`${header()}
   <main class="wrap narrow">
     <h1>Purchases</h1>
-    ${list.length ? `<div class="list">${list.map((r) => `<a class="row" href="/r/${r.id}?k=${encodeURIComponent(r.key)}" data-link><div><h3>${esc(r.title)}</h3><p class="muted">${ago(r.at)} · #${esc(r.id)}</p></div><span class="chev">›</span></a>`).join('')}</div>`
+    ${list.length ? `<div class="list">${list.map((r) => `<a class="row" href="/r/${r.id}?k=${encodeURIComponent(r.key)}" data-link><span class="ric">${I.bag}</span><div><h3>${esc(r.title)}</h3><p class="muted">${ago(r.at)} · #${esc(r.id)}</p></div><span class="chev">${I.chev}</span></a>`).join('')}</div>`
       : `<div class="empty small"><p>Things you buy on Stall show up here.</p></div>`}
     <div class="box">
       <div><h3>New phone?</h3><p class="muted">Sign with the wallet you paid from and we'll bring back every receipt.</p></div>
-      <button class="btn ghost sm" id="recover">Recover with my wallet</button>
+      <button class="btn sm" id="recover">Recover with my wallet</button>
     </div>
   </main>`, 'buy')
   $('#recover').onclick = async (e) => {
@@ -857,7 +883,7 @@ async function purchasesPage() {
 async function stallPage(key: string) {
   loading()
   const { creator: c, products, sold } = await api('/api/stall/' + key)
-  const hue = (c.name.charCodeAt(0) * 37) % 360
+  const hue = hueOf(c.name)
   const url = origin() + (c.handle ? '/@' + c.handle : '/s/' + c.id)
   render(`${header()}
   <div class="stall-banner" style="--h:${hue}"></div>
