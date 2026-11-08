@@ -3,6 +3,9 @@ import { installDevWallet } from './devwallet'
 if (import.meta.env.DEV) installDevWallet()
 import { nimiq, inNimiqPay, network, walletError, signIn, payNim, payUsdt, evmAccount, stakeNim, nimBalance } from './wallet'
 
+// Stall mark (brand/mark.mjs → brand/build.mjs)
+const MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="logo-mark" aria-hidden="true"><rect width="512" height="512" rx="116" fill="#1F2348"/><rect x="80.0" y="128" width="71.0" height="92" fill="#E9B213"/><circle cx="115.2" cy="220" r="35.2" fill="#E9B213"/><rect x="150.4" y="128" width="71.0" height="92" fill="#FFF6DA"/><circle cx="185.6" cy="220" r="35.2" fill="#FFF6DA"/><rect x="220.8" y="128" width="71.0" height="92" fill="#E9B213"/><circle cx="256.0" cy="220" r="35.2" fill="#E9B213"/><rect x="291.2" y="128" width="71.0" height="92" fill="#FFF6DA"/><circle cx="326.4" cy="220" r="35.2" fill="#FFF6DA"/><rect x="361.6" y="128" width="71.0" height="92" fill="#E9B213"/><circle cx="396.8" cy="220" r="35.2" fill="#E9B213"/><rect x="68" y="102" width="376" height="30" rx="15" fill="#FFF6DA"/><path d="M206 286 H274 L306 318 V398 H206 Z" fill="#E9B213" stroke="#E9B213" stroke-width="14" stroke-linejoin="round"/><path d="M274 286 V318 H306" fill="none" stroke="#1F2348" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/><rect x="226" y="338" width="44" height="11" rx="5.5" fill="#1F2348"/><rect x="226" y="362" width="60" height="11" rx="5.5" fill="#1F2348"/><rect x="92" y="400" width="328" height="30" rx="15" fill="#FFF6DA"/></svg>`
+
 // ---------- tiny utils ----------
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector(sel) as T
@@ -114,7 +117,7 @@ const receipts = {
 
 const awning = `<div class="awning" aria-hidden="true"></div>`
 function header(right = '') {
-  return `${awning}<header class="bar"><a href="/" class="logo" data-link><span class="logo-mark">S</span>Stall</a><div class="bar-right">${right}</div></header>`
+  return `${awning}<header class="bar"><a href="/" class="logo" data-link aria-label="Stall home">${MARK}stall</a><div class="bar-right">${right}</div></header>`
 }
 function tabs(active: 'home' | 'sell' | 'buy') {
   const signed = !!store.get('token')
@@ -782,7 +785,7 @@ async function receiptPage(oid: string) {
   <main class="wrap narrow">
     ${fresh ? `<p class="eyebrow center paid-line">Paid. It's yours.</p>` : ''}
     <div class="slot ${fresh ? 'print' : ''}"><article class="receipt ${paid ? 'paid' : ''}">
-      <div class="r-top"><span class="logo-mark">S</span><div><b>Stall receipt</b><span class="mono">#${esc(o.id)}</span></div>${paid ? `<span class="stamp">PAID</span>` : `<span class="stamp pending">PENDING</span>`}</div>
+      <div class="r-top">${MARK}<div><b>Stall receipt</b><span class="mono">#${esc(o.id)}</span></div>${paid ? `<span class="stamp">PAID</span>` : `<span class="stamp pending">PENDING</span>`}</div>
       <div class="r-item">${cover(p, 'sm')}<div><h3>${esc(p.title)}</h3><p class="muted">from ${esc(c.name)}</p></div></div>
       <dl class="r-lines">
         <div><dt>Paid</dt><dd class="mono">${amount}</dd></div>
