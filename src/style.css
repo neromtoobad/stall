@@ -442,3 +442,11 @@ body.has-tabs { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .tabs a.sell b { display: contents; }
 @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* privacy */
+.prose h1 { font-size: 28px; letter-spacing: -0.02em; margin: 8px 0 6px; }
+.prose h2 { font-size: 16px; margin: 22px 0 6px; }
+.prose p, .prose li { color: var(--ink); opacity: .82; line-height: 1.55; font-size: 15px; }
+.prose ul { padding-left: 18px; margin: 0; display: grid; gap: 6px; }
+.prose .lede { opacity: 1; font-size: 16px; }
+.prose a { color: var(--navy); text-decoration: underline; text-underline-offset: 2px; }

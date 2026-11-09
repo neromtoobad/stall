@@ -165,6 +165,7 @@ const routes: [RegExp, (m: RegExpMatchArray) => void | Promise<void>][] = [
   [/^\/@([A-Za-z0-9_]+)$/, (m) => stallPage(m[1])],
   [/^\/s\/([A-Za-z0-9]+)$/, (m) => stallPage(m[1])],
   [/^\/purchases$/, () => purchasesPage()],
+  [/^\/privacy$/, () => privacyPage()],
 ]
 
 let navToken = 0
@@ -192,6 +193,30 @@ function errorPage(msg: string) {
   render(`${header()}<main class="wrap"><div class="empty"><div class="empty-art" aria-hidden="true">?</div><h1>Hmm.</h1><p>${esc(msg)}</p><a class="btn" href="/" data-link>Back to Stall</a></div></main>`, 'home')
 }
 function loading() { render(`${header()}<main class="wrap"><div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton short"></div></main>`) }
+
+// ---------- privacy ----------
+
+function privacyPage() {
+  render(`${header()}<main class="wrap prose">
+    <h1>Privacy</h1>
+    <p class="lede">Stall keeps as little as it can. No emails, passwords, ads or trackers.</p>
+    <h2>What Stall stores</h2>
+    <ul>
+      <li><b>Creators:</b> your Nimiq wallet address, the shop name, handle and bio you type, and an optional Polygon address if you turn on USDT.</li>
+      <li><b>Products:</b> the files, covers, titles, prices and private links you upload, plus a view count for your own dashboard.</li>
+      <li><b>Orders:</b> the product, the amount, the payment message, the transaction hash and the paying wallet address, so the download can unlock and a buyer can recover it later.</li>
+    </ul>
+    <h2>What it does not store</h2>
+    <p>No real names, emails, phone numbers, IP logs or analytics cookies. Your private key never leaves Nimiq Pay: Stall only asks your wallet to sign a message or approve a payment, and you confirm every one.</p>
+    <h2>On this device</h2>
+    <p>Your sign-in session and the receipts you bought are saved in this browser's local storage so you can open them again. Clearing site data removes them; you can bring purchases back from <a href="/purchases" data-link>Purchases</a> with "Recover with my wallet".</p>
+    <h2>Public by nature</h2>
+    <p>Payments are Nimiq or Polygon transactions, which are public on their blockchains. Your shop page and the "recent sales" feed show shop names and product titles, never buyer addresses.</p>
+    <h2>Removing your data</h2>
+    <p>Removing a product from its edit page takes it off sale at once. Its file is kept only so people who already paid can still download it. To remove your whole shop and its files, open an issue on <a href="https://github.com/neromtoobad/stall/issues" target="_blank" rel="noopener">GitHub</a> from your shop handle and it will be deleted.</p>
+    <p class="fine">Stall is open source (MIT); the code that handles all of this is public.</p>
+  </main>${footer()}`, 'home')
+}
 
 // ---------- sign in ----------
 
@@ -261,7 +286,7 @@ async function landing() {
       <h1>Sell your files.<br>Get paid in NIM.</h1>
       <p class="lede">Put up presets, e-books, beats, notes, templates or a private link. Share one link. Buyers pay from Nimiq Pay and get it straight away. The money lands in your wallet, and Stall takes nothing.</p>
       <button class="btn primary block lg" id="open">Open your stall</button>
-      <p class="fine center">Sign in with your wallet. No email, no password, 0% fees.</p>
+      <p class="fine center">Sign in with your wallet. No email, no password, 0% fees. <a href="/privacy" data-link>Privacy</a></p>
     </section>
     <section id="pulse"></section>
     <section class="steps">
@@ -301,7 +326,7 @@ function card(p: any) {
 
 function footer() {
   return `<footer class="foot"><p>Stall is open source (MIT). Payments go straight from buyer to creator on the Nimiq blockchain.</p>
-  <p><a href="https://github.com/neromtoobad/stall" target="_blank" rel="noopener">GitHub</a> · Built for Nimiq Pay</p></footer>`
+  <p><a href="https://github.com/neromtoobad/stall" target="_blank" rel="noopener">GitHub</a> · <a href="/privacy" data-link>Privacy</a> · Built for Nimiq Pay</p></footer>`
 }
 
 function chart(daily: { day: number; usd: number; sales: number }[]) {
