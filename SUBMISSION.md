@@ -21,3 +21,50 @@ How it uses Nimiq Pay:
 - **Recovery:** on a new phone, buyers sign with their wallet and every purchase comes back.
 
 Creators get a dashboard with a 14-day earnings chart, tips, and views and conversion for each product. Buyers get a paper-style receipt and a share sheet for WhatsApp and X.
+
+**Tagline:** Sell your files for NIM. Paid wallet to wallet, 0% fees.
+**Icon:** brand/stall-icon-1024.png · **Share image:** public/og.png
+**Privacy:** https://stall.nerom.site/privacy
+
+## Deadlines (Cycle III)
+
+- **Nov 11, 15:00 UTC (4 PM Lagos):** Demo Day. Builders play their demo videos live. Register in Skool to demo (and enter the $25 USDC raffle): https://www.skool.com/miniappscompetition/demo-day-register-below-to-win-25-usdc-on-nov-11th
+- **Nov 11, 23:59 UTC (00:59 Nov 12 Lagos):** submissions close. Submit through the Registration Dashboard (the link is in the email you got when you registered at miniappscompetition.com).
+
+## Form checklist
+
+- [ ] Category: **Earn**
+- [ ] App name: Stall. Tagline: as above
+- [ ] Live URL: https://stall.nerom.site
+- [ ] Nimiq Pay link: https://nimpay.app/miniapps/open/stall.nerom.site
+- [ ] GitHub repo: https://github.com/neromtoobad/stall (public, MIT)
+- [ ] Lead: neromtoobad, GitHub https://github.com/neromtoobad
+- [ ] Payout wallet: your own Nimiq Pay address (NQ…). Prizes are paid in USDC on Polygon to the wallet given at submission, so check what the form asks for.
+- [ ] Description: the 226 words above
+- [ ] Demo video (optional, but Demo Day plays them)
+
+## Promo posts (builder checklist, 5 points)
+
+X, launch post (tag @miniappscomp and @NimiqCommunity):
+
+> I built Stall for the Nimiq Pay Mini Apps competition.
+>
+> Upload a file (presets, an e-book, beats, class notes), set a price in naira or dollars, share one link. Buyers pay in NIM inside Nimiq Pay and the download unlocks in seconds.
+>
+> Money goes straight to your wallet. 0% fees.
+>
+> stall.nerom.site
+>
+> @miniappscomp @NimiqCommunity
+
+X, reply with the how:
+
+> How it works under the hood:
+> - sign in with your wallet, no email
+> - checkout sends NIM directly to the creator with an order message
+> - the server checks the payment on-chain before unlocking
+> - idle earnings can be staked in one tap
+>
+> Open source (MIT): github.com/neromtoobad/stall
+
+Skool: post the same text in the Cycle III showcase thread with the icon or a screenshot.
