@@ -2,7 +2,7 @@
 
 **Sell your files inside Nimiq Pay. Buyers pay in NIM or USDT, and you keep 100%.**
 
-Live: **https://stall.nerom.site** · open in Nimiq Pay: `https://nimpay.app/miniapps/open/stall.nerom.site`
+Live: **https://stall.nerom.site** · in Nimiq Pay: Mini Apps → Custom URL → `stall.nerom.site`
 
 Stall is a Nimiq Pay mini app for creators who sell digital things: Lightroom presets, e-books, beats, notes, templates, design files. You upload the file, set a price in naira, dollars or NIM, and share one link. The buyer taps it, pays from Nimiq Pay, and downloads the file a few seconds later.
 
@@ -47,7 +47,7 @@ Anyone can still pay with a different Nimiq wallet. The product page shows the a
 | Errors | `NimiqProviderError` types: cancelling is calm and the screen stays usable |
 | Staking earnings | `sendNewStakerTransaction()` / `sendStakeTransaction()` + RPC `getStakerByAddress` + the validators API |
 | Purchase recovery | `nimiq.sign()` → orders paid from that address |
-| Sharing | `nimpay.app/miniapps/open/…` deeplinks |
+| Sharing | plain `stall.nerom.site/p/…` links; outside Nimiq Pay a sheet shows how to open them there |
 
 ## Stack
 

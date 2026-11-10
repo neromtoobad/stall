@@ -450,3 +450,7 @@ body.has-tabs { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .prose ul { padding-left: 18px; margin: 0; display: grid; gap: 6px; }
 .prose .lede { opacity: 1; font-size: 16px; }
 .prose a { color: var(--navy); text-decoration: underline; text-underline-offset: 2px; }
+
+/* open-in-Nimiq-Pay steps */
+.steps { margin: 4px 0 12px; padding-left: 20px; display: grid; gap: 4px; font-size: 15px; }
+.linkbox { background: var(--inset); border-radius: 12px; padding: 10px 12px; font-size: 13px; word-break: break-all; margin: 0 0 12px; }

@@ -1,7 +1,7 @@
 # Nimiq Pay Mini Apps Competition, Cycle III: Stall
 
 **Category:** Earn
-**Live:** https://stall.nerom.site (in Nimiq Pay: https://nimpay.app/miniapps/open/stall.nerom.site)
+**Live:** https://stall.nerom.site (in Nimiq Pay: Mini Apps → Custom URL → stall.nerom.site)
 **Repo:** https://github.com/neromtoobad/stall (MIT)
 **Team lead:** neromtoobad
 **Payout wallet:** _(user adds their Nimiq address)_
@@ -36,7 +36,7 @@ Creators get a dashboard with a 14-day earnings chart, tips, and views and conve
 - [ ] Category: **Earn**
 - [ ] App name: Stall. Tagline: as above
 - [ ] Live URL: https://stall.nerom.site
-- [ ] Nimiq Pay link: https://nimpay.app/miniapps/open/stall.nerom.site
+- [ ] Mini app URL: https://stall.nerom.site (open in Nimiq Pay via Mini Apps → Custom URL)
 - [ ] GitHub repo: https://github.com/neromtoobad/stall (public, MIT)
 - [ ] Lead: neromtoobad, GitHub https://github.com/neromtoobad
 - [ ] Payout wallet: your own Nimiq Pay address (NQ…). Prizes are paid in USDC on Polygon to the wallet given at submission, so check what the form asks for.

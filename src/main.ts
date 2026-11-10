@@ -28,6 +28,9 @@ const short = (a: string, n = 4) => { const c = (a || '').replace(/\s/g, ''); re
 const nimWatch = (net: string, hash: string) => `https://${net === 'testnet' ? 'test.' : ''}nimiq.watch/#${hash}`
 const polyScan = (hash: string) => `https://polygonscan.com/tx/${hash}`
 const origin = () => location.origin
+// nimpay.app/miniapps/open/<host> only works once the app is in the nimiq/awesome catalog.
+// Flip this on after the listing is merged; until then people paste the link into Mini Apps → Custom URL.
+const LISTED_IN_NIMIQ_PAY = false
 const openInPay = (path: string) => `https://nimpay.app/miniapps/open/${location.host}${path}`
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const linkify = (t: string) => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, '<br>')
@@ -246,13 +249,21 @@ async function doSignIn(btn?: HTMLButtonElement, next?: string) {
 }
 
 function openOutsideSheet(path: string) {
-  const url = openInPay(path)
+  const link = origin() + path
   const s = sheet(`<h3>Stall lives inside Nimiq Pay</h3>
     <p>Your wallet does the signing and paying, so Stall never touches your keys. Open this page in the Nimiq Pay app on your phone.</p>
-    <a class="btn primary block" href="${esc(url)}">Open in Nimiq Pay</a>
-    <button class="btn ghost block" data-copy>Copy link</button>
+    ${LISTED_IN_NIMIQ_PAY
+      ? `<a class="btn primary block" href="${esc(openInPay(path))}">Open in Nimiq Pay</a>
+         <button class="btn ghost block" data-copy>Copy link</button>`
+      : `<ol class="steps">
+           <li>Copy this link</li>
+           <li>In Nimiq Pay, open <b>Mini Apps</b></li>
+           <li>Paste it into <b>Custom URL</b></li>
+         </ol>
+         <p class="mono linkbox">${esc(link.replace(/^https?:\/\//, ''))}</p>
+         <button class="btn primary block" data-copy>Copy link</button>`}
     <p class="fine">No Nimiq Pay yet? It's free on the App Store and Google Play.</p>`)
-  s.el.querySelector<HTMLButtonElement>('[data-copy]')!.onclick = () => { copy(origin() + path); s.close() }
+  s.el.querySelector<HTMLButtonElement>('[data-copy]')!.onclick = () => { copy(link); s.close() }
 }
 
 // ---------- home: landing or dashboard ----------
